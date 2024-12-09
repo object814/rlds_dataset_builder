@@ -1,7 +1,6 @@
 from typing import Iterator, Tuple, Any
 
 import os
-os.environ['TFDS_DATA_DIR'] = '/data/zhouhy/Datasets/LIBERO_spatial_rlds'
 import sys
 # Add VLA_DIR to PYTHONPATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname('__file__'), '../../..')))
@@ -16,8 +15,8 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 import tensorflow_hub as hub
 
-class LiberoSpatial(tfds.core.GeneratorBasedBuilder):
-    """DatasetBuilder for libero_spatial dataset."""
+class LiberoSingleTask(tfds.core.GeneratorBasedBuilder):
+    """DatasetBuilder for libero single task dataset."""
 
     VERSION = tfds.core.Version('1.0.0')
     RELEASE_NOTES = {
@@ -26,12 +25,13 @@ class LiberoSpatial(tfds.core.GeneratorBasedBuilder):
     
     @property
     def name(self):
-        return f"libero_spatial_{os.environ.get('TASK_IDX')}"
+        return f"{os.environ.get('DATASET_NAME')}_{int(os.environ.get('TASK_IDX'))}"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.task_name = os.environ.get('TASK_NAME')
         self.task_idx = int(os.environ.get('TASK_IDX'))
+        self.dataset_name = os.environ.get('DATASET_NAME')
         self._embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
 
     def _info(self) -> tfds.core.DatasetInfo:
@@ -41,7 +41,7 @@ class LiberoSpatial(tfds.core.GeneratorBasedBuilder):
                 'steps': tfds.features.Dataset({
                     'observation': tfds.features.FeaturesDict({
                         'image': tfds.features.Image(
-                            shape=(128, 128, 3),
+                            shape=(256, 256, 3),
                             dtype=np.uint8,
                             encoding_format='png',
                             doc='Main camera RGB observation.',
@@ -97,12 +97,11 @@ class LiberoSpatial(tfds.core.GeneratorBasedBuilder):
 
     def _generate_examples(self) -> Iterator[Tuple[str, Any]]:
         """Generator of examples for each split."""
-        DATASET_NAME = "libero_spatial"
         FILTER_KEY = None
         VERBOSE = True
 
         DATASET_BASE_PATH = get_libero_path("datasets")
-        DATASET_PATH_DEMO = os.path.join(DATASET_BASE_PATH, DATASET_NAME)
+        DATASET_PATH_DEMO = os.path.join(DATASET_BASE_PATH, self.dataset_name)
         task_names_demo = get_task_names(DATASET_PATH_DEMO)
         
         assert int(self.task_idx) == int(task_names_demo.index(self.task_name)), f"Task index {self.task_idx} does not match task name {self.task_name}, correct task index is {task_names_demo.index(self.task_name)}"
